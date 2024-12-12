@@ -1,0 +1,441 @@
+
+// #################################################################################################################################################
+
+// package main
+
+// import (
+// 	"container/heap"
+// 	"fmt"
+// 	"math"
+// )
+
+// type Node struct {
+// 	level       int
+// 	path        []int
+// 	bound       int
+// 	currentCost int
+// 	parent      *Node
+// }
+
+// type PriorityQueue []*Node
+
+// func (pq PriorityQueue) Len() int { return len(pq) }
+
+// func (pq PriorityQueue) Less(i, j int) bool {
+// 	return pq[i].bound < pq[j].bound
+// }
+
+// func (pq PriorityQueue) Swap(i, j int) {
+// 	pq[i], pq[j] = pq[j], pq[i]
+// }
+
+// func (pq *PriorityQueue) Push(x interface{}) {
+// 	*pq = append(*pq, x.(*Node))
+// }
+
+// func (pq *PriorityQueue) Pop() interface{} {
+// 	old := *pq
+// 	n := len(old)
+// 	x := old[n-1]
+// 	*pq = old[0 : n-1]
+// 	return x
+// }
+
+// func reduceMatrix(graph [][]int) ([][]int, int) {
+// 	n := len(graph)
+// 	reduced := make([][]int, n)
+// 	for i := range graph {
+// 		reduced[i] = make([]int, n)
+// 		copy(reduced[i], graph[i])
+// 	}
+
+// 	lowerBound := 0
+
+// 	// Reduce rows
+// 	for i := 0; i < n; i++ {
+// 		minValue := math.MaxInt
+// 		for j := 0; j < n; j++ {
+// 			if reduced[i][j] < minValue {
+// 				minValue = reduced[i][j]
+// 			}
+// 		}
+// 		if minValue != math.MaxInt {
+// 			lowerBound += minValue
+// 			for j := 0; j < n; j++ {
+// 				if reduced[i][j] != math.MaxInt {
+// 					reduced[i][j] -= minValue
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	return reduced, lowerBound
+// }
+
+// func calculateBound(graph [][]int, path []int) int {
+// 	n := len(graph)
+// 	reduced, lowerBound := reduceMatrix(graph)
+
+// 	for i := 0; i < len(path)-1; i++ {
+// 		reduced[path[i]][path[i+1]] = math.MaxInt
+// 		for j := 0; j < n; j++ {
+// 			reduced[path[i]][j] = math.MaxInt
+// 			reduced[j][path[i+1]] = math.MaxInt
+// 		}
+// 	}
+
+// 	_, additionalCost := reduceMatrix(reduced)
+// 	return lowerBound + additionalCost
+// }
+
+// func branchAndBound(graph [][]int) (int, []int) {
+// 	n := len(graph)
+// 	reduced, initialLowerBound := reduceMatrix(graph)
+// 	_ = reduced
+// 	pq := &PriorityQueue{}
+// 	heap.Init(pq)
+
+// 	treeNodes := []*Node{}
+// 	leafNodes := []*Node{}
+
+// 	initialNode := &Node{
+// 		level:       0,
+// 		path:        []int{0},
+// 		bound:       initialLowerBound,
+// 		currentCost: 0,
+// 		parent:      nil,
+// 	}
+// 	heap.Push(pq, initialNode)
+// 	treeNodes = append(treeNodes, initialNode)
+// 	leafNodes = append(leafNodes, initialNode)
+
+// 	bestCost := math.MaxInt
+// 	var bestPath []int
+// 	step := 0
+
+// 	for len(leafNodes) > 0 {
+// 		step++
+
+// 		// Output current state of leaves
+// 		fmt.Printf("Step %d:\n", step)
+// 		fmt.Printf("Current leaves:\n")
+// 		for _, leaf := range leafNodes {
+// 			fmt.Printf("(%v):%d\n", leaf.path, leaf.bound)
+// 		}
+
+// 		// Find leaf with minimum bound
+// 		minLeafIndex := 0
+// 		for i, leaf := range leafNodes {
+// 			if leaf.bound < leafNodes[minLeafIndex].bound {
+// 				minLeafIndex = i
+// 			}
+// 		}
+// 		currentNode := leafNodes[minLeafIndex]
+// 		leafNodes = append(leafNodes[:minLeafIndex], leafNodes[minLeafIndex+1:]...)
+
+// 		fmt.Printf("Selected leaf: (%v):%d\n", currentNode.path, currentNode.bound)
+
+// 		if currentNode.level == n-1 {
+// 			finalCost := currentNode.currentCost + graph[currentNode.path[len(currentNode.path)-1]][0]
+// 			if finalCost < bestCost {
+// 				bestCost = finalCost
+// 				bestPath = append([]int{}, currentNode.path...)
+// 				bestPath = append(bestPath, 0) // Completing the cycle
+// 			}
+// 			continue
+// 		}
+
+// 		currentCity := currentNode.path[len(currentNode.path)-1]
+// 		for nextCity := 0; nextCity < n; nextCity++ {
+// 			if contains(currentNode.path, nextCity) {
+// 				continue
+// 			}
+
+// 			nextPath := append([]int{}, currentNode.path...)
+// 			nextPath = append(nextPath, nextCity)
+// 			nextCost := currentNode.currentCost + graph[currentCity][nextCity]
+// 			nextBound := calculateBound(graph, nextPath)
+
+// 			if nextBound < bestCost {
+// 				nextNode := &Node{
+// 					level:       currentNode.level + 1,
+// 					path:        nextPath,
+// 					bound:       nextBound,
+// 					currentCost: nextCost,
+// 					parent:      currentNode,
+// 				}
+// 				leafNodes = append(leafNodes, nextNode)
+// 				treeNodes = append(treeNodes, nextNode)
+// 			}
+// 		}
+// 	}
+
+// 	return bestCost, bestPath
+// }
+
+// func contains(slice []int, value int) bool {
+// 	for _, v := range slice {
+// 		if v == value {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
+
+// func main() {
+// 	graph := [][]int{
+// 		{math.MaxInt, 4, 9, 5},
+// 		{6, math.MaxInt, 4, 8},
+// 		{9, 4, math.MaxInt, 9},
+// 		{5, 8, 9, math.MaxInt},
+// 	}
+
+// 	bestCost, bestPath := branchAndBound(graph)
+
+// 	fmt.Printf("Minimum cost: %d\n", bestCost)
+// 	fmt.Printf("Best path: %v\n", bestPath)
+// }
+// #################################################################################################################################################
+// package main
+
+// import (
+// 	"container/heap"
+// 	"fmt"
+// 	"math"
+// )
+
+// type Node struct {
+// 	level       int
+// 	path        []int
+// 	bound       int
+// 	currentCost int
+// }
+
+// type PriorityQueue []*Node
+
+// func (pq PriorityQueue) Len() int { return len(pq) }
+
+// func (pq PriorityQueue) Less(i, j int) bool {
+// 	return pq[i].bound < pq[j].bound
+// }
+
+// func (pq PriorityQueue) Swap(i, j int) {
+// 	pq[i], pq[j] = pq[j], pq[i]
+// }
+
+// func (pq *PriorityQueue) Push(x interface{}) {
+// 	*pq = append(*pq, x.(*Node))
+// }
+
+// func (pq *PriorityQueue) Pop() interface{} {
+// 	old := *pq
+// 	n := len(old)
+// 	x := old[n-1]
+// 	*pq = old[0 : n-1]
+// 	return x
+// }
+
+// func reduceMatrix(graph [][]int) ([][]int, int) {
+// 	n := len(graph)
+// 	reduced := make([][]int, n)
+// 	for i := range graph {
+// 		reduced[i] = make([]int, n)
+// 		copy(reduced[i], graph[i])
+// 	}
+
+// 	lowerBound := 0
+
+// 	// Reduce rows
+// 	for i := 0; i < n; i++ {
+// 		minValue := math.MaxInt
+// 		for j := 0; j < n; j++ {
+// 			if reduced[i][j] < minValue {
+// 				minValue = reduced[i][j]
+// 			}
+// 		}
+// 		if minValue != math.MaxInt {
+// 			lowerBound += minValue
+// 			for j := 0; j < n; j++ {
+// 				if reduced[i][j] != math.MaxInt {
+// 					reduced[i][j] -= minValue
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	return reduced, lowerBound
+// }
+
+// func calculateBound(graph [][]int, path []int) int {
+// 	n := len(graph)
+// 	reduced, lowerBound := reduceMatrix(graph)
+
+// 	for i := 0; i < len(path)-1; i++ {
+// 		reduced[path[i]][path[i+1]] = math.MaxInt
+// 		for j := 0; j < n; j++ {
+// 			reduced[path[i]][j] = math.MaxInt
+// 			reduced[j][path[i+1]] = math.MaxInt
+// 		}
+// 	}
+
+// 	_, additionalCost := reduceMatrix(reduced)
+// 	return lowerBound + additionalCost
+// }
+
+// func branchAndBound(graph [][]int) (int, []int) {
+// 	n := len(graph)
+// 	reduced, initialLowerBound := reduceMatrix(graph)
+// 	_ = reduced
+// 	pq := &PriorityQueue{}
+// 	heap.Init(pq)
+
+// 	initialNode := &Node{
+// 		level:       0,
+// 		path:        []int{0},
+// 		bound:       initialLowerBound,
+// 		currentCost: 0,
+// 	}
+// 	heap.Push(pq, initialNode)
+
+// 	bestCost := math.MaxInt
+// 	var bestPath []int
+
+// 	for pq.Len() > 0 {
+// 		currentNode := heap.Pop(pq).(*Node)
+// 		fmt.Printf(
+// 			"current	level:%d, path:%v, bound:%d, currentCost:%d, bestCost:%d\n",
+// 			currentNode.level,
+// 			currentNode.path,
+// 			currentNode.bound,
+// 			currentNode.currentCost,
+// 			bestCost,
+// 		)
+// 		if currentNode.bound >= bestCost {
+// 			continue
+// 		}
+
+// 		if currentNode.level == n-1 {
+// 			finalCost := currentNode.currentCost
+// 			if finalCost < bestCost {
+// 				bestCost = finalCost
+// 				bestPath = append([]int{}, currentNode.path...)
+// 			}
+// 			continue
+// 		}
+
+// 		currentCity := currentNode.path[len(currentNode.path)-1]
+// 		for nextCity := 0; nextCity < n; nextCity++ {
+// 			if contains(currentNode.path, nextCity) {
+// 				continue
+// 			}
+
+// 			nextPath := append([]int{}, currentNode.path...)
+// 			nextPath = append(nextPath, nextCity)
+// 			nextCost := currentNode.currentCost + graph[currentCity][nextCity]
+// 			nextBound := calculateBound(graph, nextPath)
+
+// 			if nextBound < bestCost {
+// 				nextNode := &Node{
+// 					level:       currentNode.level + 1,
+// 					path:        nextPath,
+// 					bound:       nextBound,
+// 					currentCost: nextCost,
+// 				}
+// 				heap.Push(pq, nextNode)
+// 			}
+// 		}
+// 	}
+
+// 	return bestCost, bestPath
+// }
+
+// func contains(slice []int, value int) bool {
+// 	for _, v := range slice {
+// 		if v == value {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
+
+// func main() {
+// 	graph := [][]int{
+// 		{math.MaxInt, 4, 9, 5},
+// 		{6, math.MaxInt, 4, 8},
+// 		{9, 4, math.MaxInt, 9},
+// 		{5, 8, 9, math.MaxInt},
+// 	}
+
+// 	bestCost, bestPath := branchAndBound(graph)
+
+// 	fmt.Printf("Minimum cost: %d\n", bestCost)
+// 	fmt.Printf("Best path: %v\n", bestPath)
+// }
+// #########################################################################################################################
+// func calculateBound(graph [][]int, path []int) int {
+// 	n := len(graph)
+// 	reduced := make([][]int, n)
+// 	for i := range graph {
+// 		reduced[i] = make([]int, n)
+// 		copy(reduced[i], graph[i])
+// 	}
+
+// 	// Mark edges to prevent cycles
+// 	for i := 0; i < len(path)-1; i++ {
+// 		from, to := path[i], path[i+1]
+// 		reduced[from][to] = math.MaxInt
+// 		for j := 0; j < n; j++ {
+// 			reduced[from][j] = math.MaxInt
+// 			reduced[j][to] = math.MaxInt
+// 		}
+// 	}
+
+// 	// Mark return edge to prevent premature cycle closure
+// 	if len(path) == n {
+// 		fmt.Printf("Mark Infinity Cell: (%d,%d)\n", path[len(path)-1], path[0])
+// 		reduced[path[len(path)-1]][path[0]] = math.MaxInt
+// 	}
+
+// 	// Compute the lower bound for the reduced matrix
+// 	_, lowerBound := reduceMatrix(reduced)
+// 	fmt.Printf("lower bound: %d\n", lowerBound)
+// 	// Add the costs of the selected edges
+// 	for i := 0; i < len(path)-1; i++ {
+// 		fmt.Printf("up LB (%d,%d):%d\n", path[i], path[i+1], graph[path[i]][path[i+1]])
+// 		lowerBound += graph[path[i]][path[i+1]]
+// 	}
+
+// 	return lowerBound
+// }
+
+//##############################################################################################################################
+// func reduceMatrix(graph [][]int) ([][]int, int) {
+// 	n := len(graph)
+// 	reduced := make([][]int, n)
+// 	for i := range graph {
+// 		reduced[i] = make([]int, n)
+// 		copy(reduced[i], graph[i])
+// 	}
+
+// 	lowerBound := 0
+
+// 	// Reduce rows
+// 	for i := 0; i < n; i++ {
+// 		minValue := math.MaxInt
+// 		for j := 0; j < n; j++ {
+// 			if reduced[i][j] < minValue {
+// 				minValue = reduced[i][j]
+// 			}
+// 		}
+// 		if minValue != math.MaxInt {
+// 			lowerBound += minValue
+// 			for j := 0; j < n; j++ {
+// 				if reduced[i][j] != math.MaxInt {
+// 					reduced[i][j] -= minValue
+// 				}
+// 			}
+// 		}
+// 	}
+// 	printMatrix(reduced)
+// 	return reduced, lowerBound
+// }
